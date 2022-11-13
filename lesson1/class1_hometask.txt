@@ -1,0 +1,47 @@
+/*
+1.Начало работы с PostgreSQL, базовые инструменты, сравнение с другими СУБД.
+Практические задания
+1. Развернуть сервер PostgreSQL в Docker.
+Выполнил инструкции:
+https://docs.google.com/document/d/1-KxKka7KwCMu-uAqsV8C7MnMykPUGOBYxRzo0f_EBr4/mobilebasic
+mkdir -p $(pwd)/db/data
+Запустил контейнер postgres:
+docker run -d -p 5432:5432 --name postgres -e POSTGRES_PASSWORD=P@ssw0rd -e PGDATA=/var/lib/postgresql/data -v $(pwd)/db/data:/var/lib/postgresql/data postgres:14.4
+2. Создать пользователя и базу данных.
+psql -h localhost -p 5432 -U postgres
+Пароль пользователя postgres:postgres
+CREATE DATABASE exam_session TEMPLATE = 'template0' ENCODING = 'utf-8' LC_COLLATE = 'C.UTF-8' LC_CTYPE = 'C.UTF-8';
+CREATE USER admin WITH PASSWORD 'secret4All';
+ALTER DATABASE exam_session OWNER TO admin;
+\q
+psql --host 127.0.0.1 --port 5432 --username admin --dbname exam_session
+3. В базе из пункта 2 создать таблицу: не менее трёх столбцов различных типов. SQL-запрос на
+создание таблицы добавить в текстовый файл class1_hometask.txt.
+exam_session=> CREATE TABLE students (
+exam_session(> id INT GENERATED ALWAYS AS IDENTITY,
+exam_session(> first_name VARCHAR(200) NOT NULL,
+exam_session(> last_name VARCHAR(200) NOT NULL,
+exam_session(> condition BOOLEAN NOT NULL,
+exam_session(> average_mark REAL default 0,
+exam_session(> group_id INT NOT NULL
+exam_session(> );
+CREATE TABLE
+4. В таблицу из пункта 3 вставить не менее трёх строк. SQL-запрос на вставку добавить в
+текстовый файл class1_hometask.txt.
+exam_session=> INSERT INTO students (first_name, last_name, condition, average_mark, group_id) VALUES
+exam_session-> ('Doroty', 'Smith', true, 98.9, 1),
+exam_session-> ('Patricia', 'Johnson', true, 50.3, 2),
+exam_session-> ('Austin', 'Cintron', false, 20.3, 2),
+exam_session-> ('Eduardo', 'Hiatt', true, 70.1, 2),
+exam_session-> ('Linda', 'Williams', true, 70.8, 1);
+INSERT 0 5
+5. Используя мета-команды psql, вывести список всех сущностей в базе данных из пункта 2.
+Полученный список сущностей добавить в текстовый файл class1_hometask.txt.
+exam_session=> \d+
+                                               Список отношений
+ Схема  |       Имя       |        Тип         | Владелец |  Хранение  | Метод доступа |   Размер   | Описание 
+--------+-----------------+--------------------+----------+------------+---------------+------------+----------
+ public | students        | таблица            | admin    | постоянное | heap          | 8192 bytes | 
+ public | students_id_seq | последовательность | admin    | постоянное |               | 8192 bytes | 
+(2 строки)
+*/
