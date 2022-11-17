@@ -1,0 +1,156 @@
+2.Работа со структурой базы, CTE, Оценка занимаемого места.
+Практические задания
+Ожидается, что после выполнения этого практического задания у вас будет готова структура базы
+данных, которая учитывает все связи и накладываемые ограничения. Желательно представлять,
+какие примеры запросов могут приходить на базу данных.
+
+Создал вне контейнера в теринале linux:
+~/projects/pgbrains/workdir/schema.sql
+~/projects/pgbrains/workdir/data.sql
+
+mkdir -p $(pwd)/mntdata - директория создалась в двух местах:
+user@user-X75VC:~/gb.ru$ cd mntdata/
+bash: cd: mntdata/: Отказано в доступе
+и в директории, где далаю домашнее задание:
+user@user-X75VC:~/gb.ru/postgresql_lesson/lesson2$ cd mntdata/
+bash: cd: mntdata/: Отказано в доступе
+
+Далее:
+docker run --rm -it -p 5432:5432 --name postgres -e POSTGRES_PASSWORD=password -e PGDATA=/var/lib/postgresql/data -v $(pwd)/mntdata:/var/lib/postgresql/data -v $(pwd)/workdir:/workdir -w /workdir postgres:13.1
+Получил ошибку:
+docker: Error response from daemon: driver failed programming external connectivity on endpoint postgres (33ed497b69479fc235ad25110f1eb57c0525100735533513e657ef462e54b0e7): Error starting userland proxy: listen tcp4 0.0.0.0:5432: bind: address already in use.
+user@user-X75VC:~/gb.ru$ docker images -a
+Удалил все образы контейнеров с именем postgres
+docker rmi e09e90144645 407cece1abff
+Port 5432 все равно занят. Заменил port 5433:5432
+docker run --rm -it -p 5432:5432 --name postgres -e POSTGRES_PASSWORD=password -e PGDATA=/var/lib/postgresql/data -v $(pwd)/mntdata:/var/lib/postgresql/data -v $(pwd)/workdir:/workdir -w /workdir postgres:13.1
+Сработало, но т.к. не в фоновом режиме, открыл второй терминал
+в диретории с домашним задание создалась новая директория: user@user-X75VC:~/gb.ru/postgresql_lesson/lesson2/workdir$
+но она пустая, хотя в ней на самом деле есть файлы schema.sql и data.sql
+
+Выполнение операций из файла:
+Заходим в контейнер, в директорию /workdir и подключаемся к базе
+user@user-X75VC:~/projects/pgbrains/workdir$ docker exec -it postgres bash
+root@6bc44a836c9a:/workdir# ls
+должен показать содержание директории: data.sql  schema.sql, но показывет пустую директорию! --- Как это исправить?
+
+Из терминала VScode:
+user@user-X75VC:~/gb.ru/postgresql_lesson/lesson2/workdir$ psql -h localhost -p 5432 -U postgres
+Пароль пользователя postgres:postgres
+База данных создана в первом уроке, подключаемся к ней
+postgres=# \c exam_session
+exam_session=#
+
+Нужно где-то ввести:
+root@username:/workdir# psql -U admin -d exam_session
+Ввожу команду:
+root@6d327af16cc3:/workdir# psql -U admin -d exam_session
+psql: error: FATAL:  role "admin" does not exist
+root@6d327af16cc3:/workdir# psql -U postgres -d exam_session
+psql: error: FATAL:  database "exam_session" does not exist
+
+Используя команду \i, выполняем команды из файла schema.sql:
+exam_session=> \i schema.sql
+schema.sql: Нет такого файла или каталога! --- Как это исправить?
+
+Дальше описана чистая теория того, что должно было произойти:
+CREATE TABLE
+..
+CREATE TABLE
+Командой \d выводим список сущностей в базе
+Посмотреть список индексов можно командой \di
+Структуру каждой из таблиц можно смотреть отдельно командой \d <tablename>
+В рабочей директории, в файле data.sql готовим данные для наполнения базы
+и командой \i data.sql выполняем команды из файла на базе exam_session
+
+1. Добавить ограничения foreign keys для всех имеющихся связей между таблицами в БД,
+созданной в первом занятии. Ограничения можно добавлять как в существующую таблицу
+(используя alter), так и изменив команду создания таблиц из прошлого урока. Команды на
+добавление ограничений описать в файле schema.sql (редактировать файл из прошлого
+урока).
+2. Выявить необходимые ограничения (constraints) и добавить их в структуру базы данных.
+Примером может быть ограничение на неотрицательность з/п. Как и в пункте 1, делайте это в
+файле schema.sql.
+3. Подготовить набор данных для вашей базы. Не обязательно много, главное покрыть
+возможные примеры использования вашей базы. Описать запросы на добавление данных в
+data.sql файле.
+4. Оценить объём занимаемого места. Представить в виде отчёта по каждой таблице в вашей
+базе в текстовом файле size_report.txt. В отчёте указать:
+
+Т.к. не получилось запустить в контейнере запусить \i schema.sql и \i data.sql
+делаю домашнее задание из результатов домашнего задания к первому уроку
+○ список таблиц;
+\dt
+exam_session=# \dt
+            Список отношений
+ Схема  |   Имя    |   Тип   | Владелец 
+--------+----------+---------+----------
+ public | students | таблица | admin
+(1 строка)
+○ количество строк в каждой таблице в соответствии со статистикой, которую собирает Postgres;
+exam_session=> select count(*) as number_of_lines from <name_of_table>;
+exam_session=# SELECT COUNT(*) AS number_of_lines FROM students;
+ number_of_lines 
+-----------------
+               5
+(1 строка)
+
+но это дорогая операция для больших таблиц, проще сначала запустить GARBAG COLLECTOR 
+ANALYZE students;
+
+exam_session=# ANALYZE students;                                
+ANALYZE
+
+и сделать запрос
+exam_session=# select oid::regclass::text as tablename, reltuples::bigint as rows_estim
+from pg_class 
+where oid::regclass::text = 'students';
+ tablename | rows_estim 
+-----------+------------
+ students  |          5
+(1 строка)
+
+○ объём диска, занимаемого каждой таблицей;
+В рамках подключения к базе данных командой \d+ мы можем вывести расширенный список всех
+таблиц, в котором в столбце Size будет показано, сколько каждая таблица занимает физического
+пространства \d+
+exam_session=# \d+
+                                               Список отношений
+ Схема  |       Имя       |        Тип         | Владелец |  Хранение  | Метод доступа |   Размер   | Описание 
+--------+-----------------+--------------------+----------+------------+---------------+------------+----------
+ public | students        | таблица            | admin    | постоянное | heap          | 8192 bytes | 
+ public | students_id_seq | последовательность | admin    | постоянное |               | 8192 bytes | 
+(2 строки)
+
+○ общий объём диска, занимаемого экземпляром Postgres
+С помощью команды du -sh $PGDATA/* мы можем оценить, сколько места занимают все данные,
+хранимые и обрабатываемые сервером PostgreSQL. В этот объём включены файлы индексов и
+другие внутренние файлы базы данных
+$ du -sh $PGDATA/*
+
+root@6d327af16cc3:/workdir# du -sh $PGDATA/*
+23M	/var/lib/postgresql/data/base
+568K	/var/lib/postgresql/data/global
+4.0K	/var/lib/postgresql/data/pg_commit_ts
+4.0K	/var/lib/postgresql/data/pg_dynshmem
+8.0K	/var/lib/postgresql/data/pg_hba.conf
+4.0K	/var/lib/postgresql/data/pg_ident.conf
+16K	/var/lib/postgresql/data/pg_logical
+28K	/var/lib/postgresql/data/pg_multixact
+4.0K	/var/lib/postgresql/data/pg_notify
+4.0K	/var/lib/postgresql/data/pg_replslot
+4.0K	/var/lib/postgresql/data/pg_serial
+4.0K	/var/lib/postgresql/data/pg_snapshots
+4.0K	/var/lib/postgresql/data/pg_stat
+20K	/var/lib/postgresql/data/pg_stat_tmp
+12K	/var/lib/postgresql/data/pg_subtrans
+4.0K	/var/lib/postgresql/data/pg_tblspc
+4.0K	/var/lib/postgresql/data/pg_twophase
+4.0K	/var/lib/postgresql/data/PG_VERSION
+17M	/var/lib/postgresql/data/pg_wal
+12K	/var/lib/postgresql/data/pg_xact
+4.0K	/var/lib/postgresql/data/postgresql.auto.conf
+28K	/var/lib/postgresql/data/postgresql.conf
+4.0K	/var/lib/postgresql/data/postmaster.opts
+4.0K	/var/lib/postgresql/data/postmaster.pid
+root@6d327af16cc3:/workdir#
