@@ -1,0 +1,168 @@
+3.Анализ выполнения запросов и индексация данных.
+Предварительная работа:
+Скопировал файлы schema.sql и data.sql в директорию с уроком lesson3
+В /lesson3 создал вложенную директорию:
+mkdir -p $(pwd)/mntdata
+docker run --rm -it -d -p 5433:5432 --name postgres -e POSTGRES_PASSWORD=password -e PGDATA=/var/lib/postgresql/data -v $(pwd)/mntdata:/var/lib/postgresql/data -v $(pwd)/workdir:/workdir -w /workdir postgres:13.1
+psql --host 127.0.0.1 --port 5432 --username admin --dbname exam_session
+Пароль пользователя admin:secret4All
+exam_session=> \i schema.sql
+CREATE TABLE
+Только нужно в schema.sql добавить команду на удаление ранее созданных таблиц:
+DROP TABLE IF EXISTS <table_name> CASCADE;
+Заполняю данными:
+exam_session=> \i data.sql
+INSERT 0 4
+INSERT 0 5analysis
+INSERT 0 4
+INSERT 0 20
+
+1. Составить 3–5 типовых запросов к данным в созданном проекте БД. Описать их в файле queries.sql.
+Ответ: \i queries.sql
+2. Предложить, на каких полях можно создать индексы для ускорения запросов из п. 1.
+Ответ: Чаще всего требуется найти first_name и last_name в students.
+Создать требуемые индексы (не более трёх).
+
+Команды на создание индексов описать в файле schema.sql (редактировать файл из прошлого урока).
+
+3. Для каждого индекса из п. 2 показать анализ запроса до/после добавления индекса, 
+оценить занимаемый индексом объём диска. Отчёт представить в файле analysis.txt.
+
+exam_session=> explain SELECT students.first_name, students.last_name, groups.group_name, grades.grade
+exam_session-> FROM students
+exam_session-> INNER JOIN groups
+exam_session-> ON students.group_id = groups.id AND groups.group_name = '122-2'
+exam_session-> INNER JOIN grades
+exam_session-> ON students.id = grades.student_id
+exam_session-> WHERE grades.grade > 4
+exam_session-> ORDER BY students.first_name;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Sort  (cost=61.61..61.63 rows=8 width=1258)
+   Sort Key: students.first_name
+   ->  Hash Join  (cost=23.41..61.49 rows=8 width=1258)
+         Hash Cond: (grades.student_id = students.id)
+         ->  Seq Scan on grades  (cost=0.00..35.50 rows=680 width=8)
+               Filter: (grade > '4'::double precision)
+         ->  Hash  (cost=23.40..23.40 rows=1 width=1258)
+               ->  Hash Join  (cost=12.26..23.40 rows=1 width=1258)
+                     Hash Cond: (students.group_id = groups.id)
+                     ->  Seq Scan on students  (cost=0.00..10.90 rows=90 width=844)
+                     ->  Hash  (cost=12.25..12.25 rows=1 width=422)
+                           ->  Seq Scan on groups  (cost=0.00..12.25 rows=1 width=422)
+                                 Filter: ((group_name)::text = '122-2'::text)
+(13 строк)
+exam_session=> explain analyze SELECT students.first_name, students.last_name, groups.group_name, grades.grade
+exam_session-> FROM students
+exam_session-> INNER JOIN groups
+exam_session-> ON students.group_id = groups.id AND groups.group_name = '122-2'
+exam_session-> INNER JOIN grades
+exam_session-> ON students.id = grades.student_id
+exam_session-> WHERE grades.grade > 4
+exam_session-> ORDER BY students.first_name;
+QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=61.61..61.63 rows=8 width=1258) (actual time=0.134..0.138 rows=7 loops=1)
+   Sort Key: students.first_name
+   Sort Method: quicksort  Memory: 25kB
+   ->  Hash Join  (cost=23.41..61.49 rows=8 width=1258) (actual time=0.102..0.117 rows=7 loops=1)
+         Hash Cond: (grades.student_id = students.id)
+         ->  Seq Scan on grades  (cost=0.00..35.50 rows=680 width=8) (actual time=0.021..0.027 rows=10 loops=1)
+               Filter: (grade > '4'::double precision)
+               Rows Removed by Filter: 10
+         ->  Hash  (cost=23.40..23.40 rows=1 width=1258) (actual time=0.056..0.058 rows=3 loops=1)
+               Buckets: 1024  Batches: 1  Memory Usage: 9kB
+               ->  Hash Join  (cost=12.26..23.40 rows=1 width=1258) (actual time=0.034..0.041 rows=3 loops=1)
+                     Hash Cond: (students.group_id = groups.id)
+                     ->  Seq Scan on students  (cost=0.00..10.90 rows=90 width=844) (actual time=0.006..0.009 rows=5 loops=1)
+                     ->  Hash  (cost=12.25..12.25 rows=1 width=422) (actual time=0.017..0.017 rows=2 loops=1)
+                           Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                           ->  Seq Scan on groups  (cost=0.00..12.25 rows=1 width=422) (actual time=0.009..0.011 rows=2 loops=1)
+                                 Filter: ((group_name)::text = '122-2'::text)
+                                 Rows Removed by Filter: 2
+ Planning Time: 0.395 ms
+ Execution Time: 0.202 ms
+(20 строк)
+
+create index full_name_student on students (first_name, last_name);
+
+ Таблица "public.students"
+   Столбец    |          Тип           | Правило сортировки | Допустимость NULL |         По умолчанию         | Хранилище | Цель для статистики | Описание 
+--------------+------------------------+--------------------+-------------------+------------------------------+-----------+---------------------+----------
+ id           | integer                |                    | not null          | generated always as identity | plain     |                     | 
+ first_name   | character varying(200) |                    | not null          |                              | extended  |                     | 
+ last_name    | character varying(200) |                    | not null          |                              | extended  |                     | 
+ condition    | boolean                |                    | not null          |                              | plain     |                     | 
+ average_mark | real                   |                    |                   |                              | plain     |                     | 
+ group_id     | integer                |                    | not null          |                              | plain     |                     | 
+Индексы:
+    "student_id_pkey" PRIMARY KEY, btree (id)
+    "full_name_student" btree (first_name, last_name)
+Ограничения внешнего ключа:
+    "students_fk_group_id" FOREIGN KEY (group_id) REFERENCES groups(id)
+Ссылки извне:
+    TABLE "grades" CONSTRAINT "grades_fk_student_id" FOREIGN KEY (student_id) REFERENCES students(id)
+
+
+     QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=61.61..61.63 rows=8 width=1258) (actual time=0.071..0.074 rows=7 loops=1)
+   Sort Key: students.first_name
+   Sort Method: quicksort  Memory: 25kB
+   ->  Hash Join  (cost=23.41..61.49 rows=8 width=1258) (actual time=0.051..0.059 rows=7 loops=1)
+         Hash Cond: (grades.student_id = students.id)
+         ->  Seq Scan on grades  (cost=0.00..35.50 rows=680 width=8) (actual time=0.015..0.019 rows=10 loops=1)
+               Filter: (grade > '4'::double precision)
+               Rows Removed by Filter: 10
+         ->  Hash  (cost=23.40..23.40 rows=1 width=1258) (actual time=0.028..0.030 rows=3 loops=1)
+               Buckets: 1024  Batches: 1  Memory Usage: 9kB
+               ->  Hash Join  (cost=12.26..23.40 rows=1 width=1258) (actual time=0.023..0.027 rows=3 loops=1)
+                     Hash Cond: (students.group_id = groups.id)
+                     ->  Seq Scan on students  (cost=0.00..10.90 rows=90 width=844) (actual time=0.004..0.005 rows=5 loops=1)
+                     ->  Hash  (cost=12.25..12.25 rows=1 width=422) (actual time=0.012..0.012 rows=2 loops=1)
+                           Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                           ->  Seq Scan on groups  (cost=0.00..12.25 rows=1 width=422) (actual time=0.006..0.008 rows=2 loops=1)
+                                 Filter: ((group_name)::text = '122-2'::text)
+                                 Rows Removed by Filter: 2
+ Planning Time: 0.267 ms
+ Execution Time: 0.113 ms
+(20 строк)
+
+Ответ: 
+до индексации:
+ Planning Time: 0.395 ms
+ Execution Time: 0.202 ms
+после индексации
+ Planning Time: 0.267 ms
+ Execution Time: 0.113 ms
+
+Время выполнения запроса после создания индекса уменьшилось в 0.202 / 0.113 = 1.8 (раза)
+
+\di+
+                                              Список отношений
+ Схема  |        Имя        |  Тип   | Владелец | Таблица  |  Хранение  | Метод доступа | Размер | Описание 
+--------+-------------------+--------+----------+----------+------------+---------------+--------+----------
+ public | courses_id_pkey   | индекс | admin    | courses  | постоянное | btree         | 16 kB  | 
+ public | full_name_student | индекс | admin    | students | постоянное | btree         | 16 kB  | 
+ public | groups_id_pkey    | индекс | admin    | groups   | постоянное | btree         | 16 kB  | 
+ public | student_id_pkey   | индекс | admin    | students | постоянное | btree         | 16 kB  | 
+(4 строки)
+
+\dt+
+                                      Список отношений
+ Схема  |   Имя    |   Тип   | Владелец |  Хранение  | Метод доступа |   Размер   | Описание 
+--------+----------+---------+----------+------------+---------------+------------+----------
+ public | courses  | таблица | admin    | постоянное | heap          | 8192 bytes | 
+ public | grades   | таблица | admin    | постоянное | heap          | 8192 bytes | 
+ public | groups   | таблица | admin    | постоянное | heap          | 8192 bytes | 
+ public | students | таблица | admin    | постоянное | heap          | 8192 bytes | 
+(4 строки)
+
+select pg_relation_size('full_name_student');
+ pg_relation_size 
+------------------
+            16384
+(1 строка)
+
+Ответ: в данном случае объем занимаемого индексами пространства практически в два раза больше места, 
+занимаемого таблицами данных.
