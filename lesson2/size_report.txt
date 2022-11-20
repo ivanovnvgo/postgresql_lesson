@@ -4,14 +4,14 @@
 данных, которая учитывает все связи и накладываемые ограничения. Желательно представлять,
 какие примеры запросов могут приходить на базу данных.
 
-Создал вне контейнера в теринале linux:
+Создал вне контейнера в терминале linux:
 ~/projects/pgbrains/workdir/schema.sql
 ~/projects/pgbrains/workdir/data.sql
 
 mkdir -p $(pwd)/mntdata - директория создалась в двух местах:
 user@user-X75VC:~/gb.ru$ cd mntdata/
 bash: cd: mntdata/: Отказано в доступе
-и в директории, где далаю домашнее задание:
+и в директории, где делаю домашнее задание:
 user@user-X75VC:~/gb.ru/postgresql_lesson/lesson2$ cd mntdata/
 bash: cd: mntdata/: Отказано в доступе
 
@@ -23,16 +23,16 @@ user@user-X75VC:~/gb.ru$ docker images -a
 Удалил все образы контейнеров с именем postgres
 docker rmi e09e90144645 407cece1abff
 Port 5432 все равно занят. Заменил port 5433:5432
-docker run --rm -it -p 5432:5432 --name postgres -e POSTGRES_PASSWORD=password -e PGDATA=/var/lib/postgresql/data -v $(pwd)/mntdata:/var/lib/postgresql/data -v $(pwd)/workdir:/workdir -w /workdir postgres:13.1
+docker run --rm -it -p 5433:5432 --name postgres -e POSTGRES_PASSWORD=password -e PGDATA=/var/lib/postgresql/data -v $(pwd)/mntdata:/var/lib/postgresql/data -v $(pwd)/workdir:/workdir -w /workdir postgres:13.1
 Сработало, но т.к. не в фоновом режиме, открыл второй терминал
-в диретории с домашним задание создалась новая директория: user@user-X75VC:~/gb.ru/postgresql_lesson/lesson2/workdir$
+в директории с домашним задание создалась новая директория: user@user-X75VC:~/gb.ru/postgresql_lesson/lesson2/workdir$
 но она пустая, хотя в ней на самом деле есть файлы schema.sql и data.sql
 
 Выполнение операций из файла:
 Заходим в контейнер, в директорию /workdir и подключаемся к базе
 user@user-X75VC:~/projects/pgbrains/workdir$ docker exec -it postgres bash
 root@6bc44a836c9a:/workdir# ls
-должен показать содержание директории: data.sql  schema.sql, но показывет пустую директорию! --- Как это исправить?
+должен показать содержание директории: data.sql  schema.sql, но показывает пустую директорию! --- Как это исправить?
 
 Из терминала VScode:
 user@user-X75VC:~/gb.ru/postgresql_lesson/lesson2/workdir$ psql -h localhost -p 5432 -U postgres
@@ -154,3 +154,19 @@ root@6d327af16cc3:/workdir# du -sh $PGDATA/*
 4.0K	/var/lib/postgresql/data/postmaster.opts
 4.0K	/var/lib/postgresql/data/postmaster.pid
 root@6d327af16cc3:/workdir#
+
+Работа над ошибками.
+Скопировал файлы schema.sql и data.sql в диреткорию с уроком lesson2
+docker run --rm -it -d -p 5433:5432 --name postgres -e POSTGRES_PASSWORD=password -e PGDATA=/var/lib/postgresql/data -v $(pwd)/mntdata:/var/lib/postgresql/data -v $(pwd)/workdir:/workdir -w /workdir postgres:13.1
+psql --host 127.0.0.1 --port 5432 --username admin --dbname exam_session
+Пароль пользователя admin:secret4All
+exam_session=> \i schema.sql
+CREATE TABLE
+Только нужно в schema.sql добавить команду на удаление ранее созданных таблиц:
+DROP TABLE IF EXISTS <table_name> CASCADE;
+Заполняю данными:
+exam_session=> \i data.sql
+INSERT 0 4
+INSERT 0 5
+INSERT 0 4
+INSERT 0 20
