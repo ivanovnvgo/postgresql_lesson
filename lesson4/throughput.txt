@@ -1,0 +1,95 @@
+Практические задания (4 урок)
+
+Код присылать как zip-архив с файлами, необходимыми для запуска генератора нагрузки (даже если это один файл).
+1. Реализовать генератор нагрузки, который нагружает базу типовыми запросами,
+подготовленными в рамках практического задания Урока 3.
+2. Используя генератор нагрузки, измерить производительность (QPS) с разными значениями для параметров MaxConns, MinConns pool'а соединений.
+3. Подготовить отчет с информацией об используемом железе (используемый процессор,
+количество ядер, объём оперативной памяти, объём жесткого диска) и о пропускной
+способности сервера PostgreSQL для выбранного запроса. Представить отчет в файле
+throughput.txt.
+
+Предварительная работа:
+Скопировал файлы schema.sql и data.sql в директорию с уроком lesson4
+В /lesson4 создал вложенную директорию:
+mkdir -p $(pwd)/mntdata
+docker run --rm -it -d -p 5433:5432 --name postgres -e POSTGRES_PASSWORD=password -e PGDATA=/var/lib/postgresql/data -v $(pwd)/mntdata:/var/lib/postgresql/data -v $(pwd)/workdir:/workdir -w /workdir postgres:13.1
+psql --host 127.0.0.1 --port 5432 --username admin --dbname exam_session
+Пароль пользователя admin:secret4All
+
+exam_session=> \i schema.sql
+CREATE TABLE
+
+Заполняю данными:
+exam_session=> \i data.sql
+INSERT 0 4
+INSERT 0 5
+INSERT 0 4
+INSERT 0 20
+
+user@user-X75VC:~/gb.ru/postgresql_lesson/lesson4/app$ go get github.com/jackc/pgx/v5
+user@user-X75VC:~/gb.ru/postgresql_lesson/lesson4/app$ go mod init postgresql_lesson/lesson4/app
+user@user-X75VC:~/gb.ru/postgresql_lesson/lesson4/app$ go get github.com/jackc/pgx/v4
+user@user-X75VC:~/gb.ru/postgresql_lesson/lesson4/app$ go mod tidy
+user@user-X75VC:~/gb.ru/postgresql_lesson/lesson4/app$ go run main.go 
+Hello, world! //Работает  pgx
+
+Пример с пакетом database/sql не проверял на роботоспособность
+
+В примерах использования кода используем эту строку для подключения к базе данных:
+url := "postgres://admin:secret4All@localhost:5432/exam_session"
+
+user@user-X75VC:~/gb.ru/postgresql_lesson/lesson4/app$ go get github.com/jackc/pgx/v4/pgxpool@v4.17.2
+go: downloading github.com/jackc/puddle v1.3.0
+
+Hello, world! // Pool соединений тоже работает
+На стороне Postgres есть изменяемый лимит количества соединений, которые он готов принять. Посмотреть текущее значение можно, используя show max_connections.
+
+exam_session=> show max_connections;
+ max_connections 
+-----------------
+ 100
+(1 строка)
+
+Максимальное количество соединений можно менять в конфигурационном файле postgresql.conf
+или используя команду alter system set max_connections to '500'; В обоих случаях после
+изменения параметра требуется рестарт сервера PostgreSQL.
+
+Тестирование БД.
+1.При
+cfg.MaxConns = 1
+cfg.MinConns = 1
+
+Получили:
+start attack
+duration: 10.169284813s
+threads: 1000
+queries: 63323
+QPS: 6332
+
+2.При
+cfg.MaxConns = 8
+cfg.MinConns = 8
+
+Получили:
+start attack
+duration: 10.048859929s
+threads: 1000
+queries: 198587
+QPS: 19858
+
+3.При
+cfg.MaxConns = 16
+cfg.MinConns = 16
+
+Получили:
+start attack
+duration: 10.045877975s
+threads: 1000
+queries: 226434
+QPS: 22643
+
+Оперативная память: 11,6 GiB, 
+Процессор Intel® Core™ i5-3230M CPU @ 2.60GHz × 4, 
+Количество ядер — 1, 
+Емкость жесткого диска 1,3 TB
