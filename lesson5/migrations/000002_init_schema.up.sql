@@ -1,0 +1,1 @@
+create index full_name_student on students (first_name, last_name);
