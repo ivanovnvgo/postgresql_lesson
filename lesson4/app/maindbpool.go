@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"log"
 	"net"
 	"time"
+
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 func main() {

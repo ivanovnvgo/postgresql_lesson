@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"log"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 // Раздел INSERT PostgreSQL
