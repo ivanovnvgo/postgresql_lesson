@@ -9,10 +9,11 @@ import (
 
 type PG struct {
 	dbpool *pgxpool.Pool
-	}
-	func NewPG(dbpool *pgxpool.Pool) *PG {
+}
+
+func NewPG(dbpool *pgxpool.Pool) *PG {
 	return &PG{dbpool}
-	}
+}
 
 // Раздел SELECT PostgreSQL
 
@@ -29,7 +30,8 @@ type FullNameSearchDuplicate struct {
 // search ищет всех сотрудников со схожими фамилиями.
 // Из функции возвращается список FullNameSearchDuplicate, отсортированный по FirstName.
 // Размер возвращаемого списка ограничен значением limit.
-func Search(ctx context.Context, dbpool *pgxpool.Pool, prefix string, limit int) ([]FullNameSearchDuplicate, error) {
+//func Search(ctx context.Context, dbpool *pgxpool.Pool, prefix string, limit int) ([]FullNameSearchDuplicate, error) {
+func (s *PG) Search(ctx context.Context, prefix string, limit int) ([]FullNameSearchDuplicate, error) {
 	const sql = `
 	select
 	first_name,
@@ -40,7 +42,7 @@ func Search(ctx context.Context, dbpool *pgxpool.Pool, prefix string, limit int)
 	limit $2;
 	`
 	pattern := prefix + "%"
-	rows, err := dbpool.Query(ctx, sql, pattern, limit)
+	rows, err := s.dbpool.Query(ctx, sql, pattern, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query data: %w", err)
 	}

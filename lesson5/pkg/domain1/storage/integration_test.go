@@ -1,4 +1,5 @@
 // go:build integration_tests
+//go:build integration_tests
 // +build integration_tests
 
 // файлы с интеграционными тестами используют package storage_test,
@@ -53,8 +54,8 @@ func TestIntegrationSearch(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			tt.prepare(dbpool)
-			hints, err := tt.storage.Search(tt.ctx, tt.prefix, tt.limit)
-			//hints, err := tt.store.Search(tt.ctx, tt.prefix, tt.limit)
+			//hints, err := tt.storage.Search(tt.ctx, tt.prefix, tt.limit)
+			hints, err := tt.store.Search(tt.ctx, tt.prefix, tt.limit)
 			tt.check(t, hints, err)
 		})
 	}
