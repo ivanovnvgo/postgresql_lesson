@@ -7,12 +7,13 @@ package storage_test
 
 import (
 	"context"
-	"lesson5/pkg/domain1/storage"
 	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/require"
+
+	"lesson5/pkg/domain1/storage"
 )
 
 func TestIntegrationSearch(t *testing.T) {
@@ -42,7 +43,7 @@ func TestIntegrationSearch(t *testing.T) {
 				("Viktor", "Petrov", true, 4.9, 5)
 				returning id;`)
 			},
-			check: func(t *testing.T, hints []storage.EmailSearchHint, err error) {
+			check: func(t *testing.T, hints []storage.FullNameSearchDuplicate, err error) {
 				require.NoError(t, err)
 				require.NotEmpty(t, hints)
 			},

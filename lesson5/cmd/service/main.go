@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	"lesson5/pkg/domain1/storage"
-
 	"github.com/jackc/pgx/v4/pgxpool"
+
+	"lesson5/pkg/domain1/storage"
 )
 
 // Раздел INSERT PostgreSQL
